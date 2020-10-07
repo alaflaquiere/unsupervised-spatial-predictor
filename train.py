@@ -58,6 +58,9 @@ def run(conf):
     device = "cuda" if (conf["training"]["gpu"] and torch.cuda.is_available()) else "cpu"
     dir_datasets = get_dataset_subfolders(conf["data_directory"])
     for i, dir_dataset in enumerate(dir_datasets):
+        # load the regular grid for evaluation
+        motor_grid, state_grid = load_regular_grid(dir_dataset)
+        state_grid = normalize_array(state_grid)
         for mode in ["hopping_base", "static_base", "dynamic_base"]:
             for r in range(conf["training"]["repeat_training"]):
                 # create the output folder
@@ -74,9 +77,6 @@ def run(conf):
                 dataset_path = os.path.join(dir_dataset,
                                             "data_{}.npz".format(mode))
                 loader, dim_m, dim_s = get_dataloader(dataset_path, conf)
-                # load the regular grid for evaluation
-                motor_grid, state_grid = load_regular_grid(dir_dataset)
-                state_grid = normalize_array(state_grid)
                 # create the network
                 conf["network"]["dim_m"] = dim_m
                 conf["network"]["dim_s"] = dim_s
