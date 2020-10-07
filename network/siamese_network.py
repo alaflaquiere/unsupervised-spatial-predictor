@@ -43,9 +43,9 @@ class SiameseSMPredictor(nn.Module):
 
     def get_first_linear_projection(self, m):
         h = self.m_encoder(m)
-        W = self.s_predictor[0].weight[:, :self.dim_h]
+        W = self.s_predictor[0].weight[:, self.dim_h:2 * self.dim_h]
         b = self.s_predictor[0].bias
         return torch.mm(h, W.T) + b
 
     def get_first_weight_vector(self):
-        return self.s_predictor[0].weight[:, :self.dim_h]
+        return self.s_predictor[0].weight[:, self.dim_h:2 * self.dim_h]
