@@ -1,8 +1,9 @@
-data_directory: "..\\room-explorer\\.datasets\\FixedOrientation_NoAperture-2020-10-06--18-23-37"
-save_directory: ".model/experiment_FixedOrientation_NoAperture"
+data_directory: "..\\room-explorer\\.datasets\\30_FixedOrientation_NoAperture-2020-10-06--19-49-24"
+save_directory: ".model/test"
 
 network:
   dim_h: 3
+  activation: selu
 
 data_loader:
   batch_size: 128
@@ -15,9 +16,9 @@ optimizer:
   weight_decay: 0.0
 
 training:
-  n_epochs: 60
+  n_epochs: 50  #60
   repeat_training: 1
   noise_motor: 0
   sensor_noise: 0
-  display: True
+  display: False
   gpu: True

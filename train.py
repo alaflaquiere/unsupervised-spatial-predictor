@@ -1,4 +1,5 @@
 import os
+import shutil
 from argparse import ArgumentParser
 import yaml
 from tqdm import tqdm
@@ -22,14 +23,25 @@ def train_epoch(loader, model, loss_fn, optimizer, scheduler):
         outputs = model(*inputs)
         loss = loss_fn(outputs, targets)
         epoch_loss += loss.item()
-        # if batch_index % 100 == 99:
-        #     print("loss: {}".format(epoch_loss/(batch_index + 1)))
         for param in model.parameters():  # computationally efficient way to do self.optimizer.zero_grad()
             param.grad = None
         loss.backward()
         optimizer.step()
     scheduler.step()
     return epoch_loss / len(loader)
+
+
+def send_embedding(model, motor_grid, state_grid, model_dir):
+    device = "cuda" if next(model.parameters()).is_cuda else "cpu"
+    with torch.no_grad():
+        model.eval()
+        h_grid = model.get_representation(motor_grid.to(device))
+        h_grid = normalize_array(h_grid.cpu().numpy())
+        W = model.get_first_weight_vector().detach().cpu().numpy()
+        save_embedding(h_grid,
+                       state_grid,
+                       W,
+                       os.path.join(model_dir, "temp_emb.npy"))
 
 
 def save_model(model, directory, conf):
@@ -47,7 +59,6 @@ def run(conf):
     dir_datasets = get_dataset_subfolders(conf["data_directory"])
     for i, dir_dataset in enumerate(dir_datasets):
         for mode in ["hopping_base", "static_base", "dynamic_base"]:
-            print("\nmode: {}".format(mode))
             for r in range(conf["training"]["repeat_training"]):
                 # create the output folder
                 model_dir = os.path.join(conf["save_directory"],
@@ -55,10 +66,6 @@ def run(conf):
                                          mode,
                                          "trial{:03}".format(r))
                 os.makedirs(model_dir)
-                print("training {}/{} with {} [{}]".format(r + 1,
-                                                             conf["training"]["repeat_training"],
-                                                             mode,
-                                                             dir_dataset))
                 # start display server
                 if conf["training"]["display"]:
                     display_proc = start_display_server(
@@ -70,12 +77,10 @@ def run(conf):
                 # load the regular grid for evaluation
                 motor_grid, state_grid = load_regular_grid(dir_dataset)
                 state_grid = normalize_array(state_grid)
-                motor_grid = motor_grid.to(device)
                 # create the network
-                net = SiameseSMPredictor(dim_m=dim_m,
-                                         dim_s=dim_s,
-                                         activation="selu",
-                                         **conf["network"]).to(device)
+                conf["network"]["dim_m"] = dim_m
+                conf["network"]["dim_s"] = dim_s
+                net = SiameseSMPredictor(**conf["network"]).to(device)
                 # loss
                 loss_fn = nn.MSELoss(reduction="mean")
                 # optimizer
@@ -83,24 +88,24 @@ def run(conf):
                                  **conf["optimizer"])
                 scheduler = lr_scheduler.ExponentialLR(optimizer,
                                                        1e-2**(1/conf["training"]["n_epochs"]))
-                for e in tqdm(range(conf["training"]["n_epochs"])):
-                    loss = train_epoch(loader, net, loss_fn, optimizer, scheduler)
-                    # print("epoch: {} - loss: {}".format(e, loss))
+                msg = "dataset: {}/{}, {}, trial {}/{}".format(i + 1, len(dir_datasets),
+                                                               mode,
+                                                               r+1, conf["training"]["repeat_training"])
+                for _ in tqdm(range(conf["training"]["n_epochs"]), desc=msg):
+                    _ = train_epoch(loader, net, loss_fn, optimizer, scheduler)
                     # visualize the embedding
                     if conf["training"]["display"]:
-                        with torch.no_grad():
-                            net.eval()
-                            h_grid = net.get_representation(motor_grid)
-                            h_grid = h_grid.cpu().numpy()
-                            h_grid = normalize_array(h_grid)
-                            save_embedding(h_grid,
-                                           state_grid,
-                                           os.path.join(model_dir, "temp_emb.npy"))
+                        send_embedding(net, motor_grid, state_grid, model_dir)
                 # save model
+                shutil.copyfile(os.path.join(dir_dataset,
+                                             "data_regular_grid.npz"),
+                                os.path.join(model_dir,
+                                             "data_regular_grid.npz"))
                 save_model(net, model_dir, conf)
                 # kill display server
                 if conf["training"]["display"]:
                     display_proc.kill()
+                    os.remove(os.path.join(model_dir, "temp_emb.npy"))
 
 
 if __name__ == '__main__':

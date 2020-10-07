@@ -18,7 +18,7 @@ def append_time(d):
     t = time.strftime("%Y-%m-%d--%H-%M-%S",
                       time.localtime())
     d = "-".join((d, t))
-    print("experiment name updated to: {}".format(d))
+    print("experiment name: {}".format(d))
     return d
 
 

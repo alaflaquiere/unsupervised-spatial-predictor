@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 class SiameseSMPredictor(nn.Module):
@@ -8,9 +7,10 @@ class SiameseSMPredictor(nn.Module):
     def __init__(self, dim_m, dim_h, dim_s, activation):
         super().__init__()
         assert activation in ["selu", "relu"]
-        if activation is "selu":
+        self.dim_h = dim_h
+        if activation == "selu":
             activ = nn.SELU
-        elif activation is "relu":
+        elif activation == "relu":
             activ = nn.ReLU
         self.m_encoder = nn.Sequential(
             nn.Linear(dim_m, 150),
@@ -40,3 +40,12 @@ class SiameseSMPredictor(nn.Module):
 
     def get_representation(self, m):
         return self.m_encoder(m)
+
+    def get_first_linear_projection(self, m):
+        h = self.m_encoder(m)
+        W = self.s_predictor[0].weight[:, :self.dim_h]
+        b = self.s_predictor[0].bias
+        return torch.mm(h, W.T) + b
+
+    def get_first_weight_vector(self):
+        return self.s_predictor[0].weight[:, :self.dim_h]
