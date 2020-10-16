@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 import torch
 from sklearn import linear_model
 from scipy.spatial.distance import pdist
-from utils.data_utils import normalize_array
-from network.siamese_network import SiameseSMPredictor
-from utils.data_utils import load_regular_grid
+from unsup_spatial_pred import normalize_array
+from unsup_spatial_pred import SiameseSMPredictor
+from unsup_spatial_pred import load_regular_grid
 
 
 class Evaluator:
@@ -17,13 +17,13 @@ class Evaluator:
         """Constructor"""
         self.path = path
         # collect all the hopping_base models
-        search_str = os.path.join(self.path, "exp*", "hopping_base", "trial*")
+        search_str = os.path.join(self.path, "trial*", "hopping_base")
         self.dir_hop = sorted(glob.glob(search_str))
         # collect all the static_base models
-        search_str = os.path.join(self.path, "exp*", "static_base", "trial*")
+        search_str = os.path.join(self.path, "trial*", "static_base")
         self.dir_sta = sorted(glob.glob(search_str))
         # collect all the dynamic_base models
-        search_str = os.path.join(self.path, "exp*", "dynamic_base", "trial*")
+        search_str = os.path.join(self.path, "trial*", "dynamic_base")
         self.dir_dyn = sorted(glob.glob(search_str))
         # compile the results
         self.results_hop = self.evaluate_all(self.dir_hop)
@@ -60,8 +60,14 @@ class Evaluator:
         # get the embedding
         with torch.no_grad():
             model.eval()
-            h_grid = model.get_representation(m_grid.to(device))
-            h_grid = normalize_array(h_grid.detach().cpu().numpy())
+            for k in np.arange(0, m_grid.shape[0], 256):  # in case we're sending too much to the gpu at once
+                idx = np.arange(k, min(k + 256, m_grid.shape[0]))
+                h_tensor = model.get_representation(m_grid[idx, :].to(device))
+                if "h_grid" not in locals():
+                    h_grid = h_tensor.detach().cpu().numpy()
+                else:
+                    h_grid = np.vstack((h_grid, h_tensor.detach().cpu().numpy()))
+            h_grid = normalize_array(h_grid)
         # compute dissimilarities
         metric_error, topo_error = self.compute_dissimilarities(sta_grid, h_grid)
         # compute singular values of the embedding
@@ -88,7 +94,7 @@ class Evaluator:
                 )
             )
             # load the regular grid for evaluation
-            motor_grid, state_grid = load_regular_grid(d)
+            motor_grid, state_grid = load_regular_grid(d)  # todo load the regular grid at the root of the dataset
             # compute metrics
             metric_error, topo_error, sv_h, sv_w = self.evaluate(net, motor_grid, state_grid)
             results["metric_errors"].append(metric_error)
@@ -138,5 +144,5 @@ class Evaluator:
         ax.set_xticklabels(["dynamic_base", "static_base", "hopping_base"])
         ax.set_title("W singular values")
 
-        plt.show(block=False)
+        plt.show(block=True)
         return fig

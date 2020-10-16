@@ -12,6 +12,8 @@ class SiameseSMPredictor(nn.Module):
             activ = nn.SELU
         elif activation == "relu":
             activ = nn.ReLU
+        else:
+            activ = None
         self.m_encoder = nn.Sequential(
             nn.Linear(dim_m, 150),
             activ(),

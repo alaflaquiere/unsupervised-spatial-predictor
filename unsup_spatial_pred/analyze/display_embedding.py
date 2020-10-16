@@ -5,6 +5,7 @@ import platform
 import subprocess
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from _pickle import UnpicklingError
 plt.ion()
 
 
@@ -68,18 +69,23 @@ class DisplayEmbedding:
         self.fig.savefig(self.save_name)
 
     def _run(self):
-        # TODO: greater speed by checking when the file is changed: https://mygisblog.wordpress.com/2014/08/03/monitoring-if-a-file-has-changed-in-python/
+        moddate = 0
         while True:
-            if os.path.exists(self.path):
-                try:
-                    dic = np.load(self.path, allow_pickle=True)[()]  # array of 0 dimensions
-                    self._display(dic["h_grid"],
-                                  dic["state_grid"],
-                                  dic["W"])
-                finally:
-                    plt.pause(5)
-            else:
-                plt.pause(1)
+            try:
+                stamp = os.stat(self.path).st_mtime
+                if stamp != moddate:
+                    moddate = stamp
+                    try:
+                        dic = np.load(self.path, allow_pickle=True)[()]  # array of 0 dimensions
+                        self._display(dic["h_grid"],
+                                      dic["state_grid"],
+                                      dic["W"])
+                    except (OSError, UnpicklingError):
+                        pass
+            except FileNotFoundError:
+                pass
+            finally:
+                plt.pause(0.2)
 
 
 if __name__ == '__main__':

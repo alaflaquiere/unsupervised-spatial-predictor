@@ -1,11 +1,14 @@
-data_directory: "..\\room-explorer\\.datasets\\30_FixedOrientation_NoAperture-2020-10-06--19-49-24"
-save_directory: ".model/test"
+files:
+  data_directory: "../../room_explorer/.data/FixedOrientationAndAperture.hdf5"
+  save_directory: ".model/temp"
 
 network:
   dim_h: 3
   activation: selu
 
 data_loader:
+  noise_motor: 0
+  noise_sensor: 0
   batch_size: 128
   num_workers: 0
   drop_last: True
@@ -16,9 +19,8 @@ optimizer:
   weight_decay: 0.0
 
 training:
+  n_trials: 10
+  n_env_per_training: 10
   n_epochs: 50  #60
-  repeat_training: 1
-  noise_motor: 0
-  sensor_noise: 0
   display: False
   gpu: True
