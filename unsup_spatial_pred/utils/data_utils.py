@@ -39,48 +39,46 @@ def load_regular_grid(path):
     return motor_grid, data["state_grid"]
 
 
-def get_dataloader(dataset, mode, idx_envs, idx_trans,  noise_motor, noise_sensor,
+def get_dataloader(dataset, mode, idx_envs, idx_trans, noise_motor, noise_sensor,
                    batch_size, num_workers, drop_last, shuffle):
-
-    with h5py.File(dataset, "r") as file:
-        transitions = dict()
-        # combine the datasets
-        for i_env, i_tran in zip(idx_envs, idx_trans):
-            trans = load_normalized_dataset(file, i_env, i_tran, mode)
-            if len(transitions) == 0:
-                transitions = trans.copy()
-                dim_m = transitions["motors_t"].shape[1]
-                dim_s = transitions["sensors_t"].shape[1]
-            else:
-                for k in transitions.keys():
-                    transitions[k] = np.vstack((transitions[k],
-                                                trans[k].copy()))
-    # add sensorimotor noise
-    for key in ["motors_t", "motors_tp"]:
-        transitions[key] += noise_motor * np.random.randn(*transitions[key].shape)
-    for key in ["sensors_t", "sensors_tp"]:
-        transitions[key] += noise_sensor * np.random.randn(*transitions[key].shape)
     # create the dataloader
-    dataset = TransitionsDataset(transitions)  # TODO: MOVE THE SAMPLING IN THE TransitionDataset
-    loader = DataLoader(dataset,
+    transition_dataset = TransitionsDataset(dataset, mode, idx_envs, idx_trans,
+                                            noise_motor, noise_sensor)
+    loader = DataLoader(transition_dataset,
                         batch_size=batch_size,
                         num_workers=num_workers,
                         drop_last=drop_last,
                         shuffle=shuffle)
-    return loader, dim_m, dim_s
+    return loader, transition_dataset.dim_m, transition_dataset.dim_s
 
 
 class TransitionsDataset(Dataset):
-
-    def __init__(self, data):
-        self.data = data
+    def __init__(self, dataset, mode, idx_envs, idx_trans, noise_motor=0, noise_sensor=0):
+        with h5py.File(dataset, "r") as file:
+            self.transitions = dict()
+            # combine the datasets
+            for i_env, i_tran in zip(idx_envs, idx_trans):
+                trans = load_normalized_dataset(file, i_env, i_tran, mode)
+                if len(self.transitions) == 0:
+                    self.transitions = trans.copy()
+                    self.dim_m = self.transitions["motors_t"].shape[1]
+                    self.dim_s = self.transitions["sensors_t"].shape[1]
+                else:
+                    for k in self.transitions.keys():
+                        self.transitions[k] = np.vstack((self.transitions[k],
+                                                         trans[k].copy()))
+        # add sensorimotor noise
+        for key in ["motors_t", "motors_tp"]:
+            self.transitions[key] += noise_motor * np.random.randn(*self.transitions[key].shape)
+        for key in ["sensors_t", "sensors_tp"]:
+            self.transitions[key] += noise_sensor * np.random.randn(*self.transitions[key].shape)
 
     def __len__(self):
-        return self.data["motors_t"].shape[0]
+        return self.transitions["motors_t"].shape[0]
 
     def __getitem__(self, idx):
-        m_t = torch.Tensor(self.data["motors_t"][idx])
-        m_tp = torch.Tensor(self.data["motors_tp"][idx])
-        s_t = torch.Tensor(self.data["sensors_t"][idx])
-        s_tp = torch.Tensor(self.data["sensors_tp"][idx])
+        m_t = torch.Tensor(self.transitions["motors_t"][idx])
+        m_tp = torch.Tensor(self.transitions["motors_tp"][idx])
+        s_t = torch.Tensor(self.transitions["sensors_t"][idx])
+        s_tp = torch.Tensor(self.transitions["sensors_tp"][idx])
         return (m_t, m_tp, s_t), s_tp

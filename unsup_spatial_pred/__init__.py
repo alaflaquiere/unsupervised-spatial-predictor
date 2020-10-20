@@ -1,4 +1,5 @@
 from unsup_spatial_pred.utils.data_utils import normalize_array, get_dataloader, load_regular_grid
 from unsup_spatial_pred.network.siamese_network import SiameseSMPredictor
-from unsup_spatial_pred.analyze.anlayze_networks import Evaluator
-from unsup_spatial_pred.analyze.display_embedding import save_embedding, start_display_server
+from unsup_spatial_pred.analyze.evaluator import Evaluator
+from unsup_spatial_pred.analyze.live_visualizer import save_embedding, start_display_server
+from unsup_spatial_pred.train.training import run_experiment

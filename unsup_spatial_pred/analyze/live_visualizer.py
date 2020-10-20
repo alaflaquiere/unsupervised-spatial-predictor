@@ -32,7 +32,7 @@ def start_display_server(path):
     return proc
 
 
-class DisplayEmbedding:
+class LiveEmbeddingVisualizer:
     def __init__(self, path):
         self.path = path
         self.save_name = os.path.join(os.path.dirname(self.path),
@@ -89,4 +89,4 @@ class DisplayEmbedding:
 
 
 if __name__ == '__main__':
-    d = DisplayEmbedding(sys.argv[1])
+    d = LiveEmbeddingVisualizer(sys.argv[1])
