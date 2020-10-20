@@ -20,11 +20,12 @@ def save_embedding(h, state, w, path):
 
 
 def start_display_server(path):
+    root = os.path.realpath(__file__)
     if platform.system() == 'Windows':
-        command = "python analyze\\display_embedding.py {}".format(path)
+        command = "python {} {}".format(root, path)
         proc = subprocess.Popen(command)
     elif platform.system() == 'Linux':
-        command = "exec python3 analyze\\display_embedding.py {}".format(path)
+        command = "exec python3 {} {}".format(root, path)
         proc = subprocess.Popen([command], shell=True)
     else:
         proc = None

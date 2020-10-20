@@ -21,6 +21,6 @@ optimizer:
 training:
   n_trials: 10
   n_env_per_training: 10
-  n_epochs: 50  #60
-  display: False
+  n_epochs: 3  #60
+  display: True
   gpu: True

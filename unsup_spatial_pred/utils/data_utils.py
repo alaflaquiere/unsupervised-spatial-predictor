@@ -13,7 +13,6 @@ def normalize_array(x):
 
 def load_normalized_dataset(file, i_env, i_tran, mode):
     subds = sorted([k for k in list(file.keys()) if "env" in k])
-    print("load {} transitions from {}".format(len(i_tran), subds[i_env]))
     data = dict()
     data["motors_t"] = file[subds[i_env]][mode]["motor_t"][:][i_tran, :]
     data["motors_tp"] = file[subds[i_env]][mode]["motor_tp"][:][i_tran, :]

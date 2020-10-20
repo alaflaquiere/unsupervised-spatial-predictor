@@ -87,7 +87,6 @@ def save_model(model, directory, conf):
 def load_and_save_regular_grid(dataset, experiment):
     # load the regular grid for evaluation
     with h5py.File(dataset, "r") as file:
-        print("load and save regular grid")
         motor_grid = file["agent"]["motor_grid"][:]
         state_grid = file["agent"]["state_grid"][:]
         state_grid = normalize_array(state_grid)
@@ -95,7 +94,7 @@ def load_and_save_regular_grid(dataset, experiment):
     np.savez_compressed(os.path.join(experiment, "regular_grid.npz"),
                         motor_grid=motor_grid,
                         state_grid=state_grid)
-    return motor_grid, state_grid
+    return torch.Tensor(motor_grid), state_grid
 
 
 def draw_expl_indexes(n_envs, n_transitions, n_env_per_training):
@@ -109,6 +108,36 @@ def draw_expl_indexes(n_envs, n_transitions, n_env_per_training):
     return idx_envs, idx_trans
 
 
+def run_trial(mode, model_dir, dataset, idx_envs, idx_trans, trial, motor_grid, state_grid, conf):
+    device = "cuda" if (conf["training"]["gpu"] and torch.cuda.is_available()) else "cpu"
+
+    # get dataloader
+    loader, dim_m, dim_s = get_dataloader(dataset, mode, idx_envs, idx_trans,
+                                          **conf["data_loader"])
+    # create the network
+    conf["network"]["dim_m"] = dim_m
+    conf["network"]["dim_s"] = dim_s
+    net = SiameseSMPredictor(**conf["network"]).to(device)
+    # loss
+    loss_fn = nn.MSELoss(reduction="mean")
+    # optimizer
+    optimizer = Adam(net.parameters(),
+                     **conf["optimizer"])
+    scheduler = lr_scheduler.ExponentialLR(optimizer,
+                                           1e-2 ** (1 / conf["training"]["n_epochs"]))
+    msg = "trial: {}/{}, {}, {} environment(s)".format(trial + 1,
+                                                       conf["training"]["n_trials"],
+                                                       mode,
+                                                       conf["training"]["n_env_per_training"])
+    for _ in trange(conf["training"]["n_epochs"], desc=msg):
+        _ = train_epoch(loader, net, loss_fn, optimizer, scheduler)
+        # visualize the embedding
+        if conf["training"]["display"]:
+            send_embedding(net, motor_grid, state_grid, model_dir)
+    # save model
+    save_model(net, model_dir, conf)
+
+
 def run(conf):
     """TODO"""
     dataset = conf["files"]["data_directory"]
@@ -116,7 +145,7 @@ def run(conf):
 
     os.makedirs(experiment)
 
-    device = "cuda" if (conf["training"]["gpu"] and torch.cuda.is_available()) else "cpu"
+    # device = "cuda" if (conf["training"]["gpu"] and torch.cuda.is_available()) else "cpu"
 
     # read metaparameters
     with h5py.File(dataset, "r") as file:
@@ -127,43 +156,26 @@ def run(conf):
     motor_grid, state_grid = load_and_save_regular_grid(dataset, experiment)
 
     for trial in range(conf["training"]["n_trials"]):
+        print("trial: {}".format(trial))
         idx_envs, idx_trans = draw_expl_indexes(n_envs, n_transitions,
                                                 conf["training"]["n_env_per_training"])
         for mode in ["hopping_base", "static_base", "dynamic_base"]:
+
             # create the output folder
             model_dir = os.path.join(experiment,
                                      "trial{:03}".format(trial),
                                      mode)
             os.makedirs(model_dir)
+
             # start display server
             if conf["training"]["display"]:
                 display_proc = start_display_server(
                     os.path.join(model_dir, "temp_emb.npy"))
-            # get dataloader
-            loader, dim_m, dim_s = get_dataloader(dataset, mode, idx_envs, idx_trans,
-                                                  **conf["data_loader"])
-            # create the network
-            conf["network"]["dim_m"] = dim_m
-            conf["network"]["dim_s"] = dim_s
-            net = SiameseSMPredictor(**conf["network"]).to(device)
-            # loss
-            loss_fn = nn.MSELoss(reduction="mean")
-            # optimizer
-            optimizer = Adam(net.parameters(),
-                             **conf["optimizer"])
-            scheduler = lr_scheduler.ExponentialLR(optimizer,
-                                                   1e-2**(1/conf["training"]["n_epochs"]))
-            msg = "trial: {}/{}, {}, {} environment(s)".format(trial + 1,
-                                                               conf["training"]["n_trials"],
-                                                               mode,
-                                                               conf["training"]["n_env_per_training"])
-            for _ in trange(conf["training"]["n_epochs"], desc=msg):
-                _ = train_epoch(loader, net, loss_fn, optimizer, scheduler)
-                # visualize the embedding
-                if conf["training"]["display"]:
-                    send_embedding(net, motor_grid, state_grid, model_dir)
-            # save model
-            save_model(net, model_dir, conf)
+
+            # run the trial
+            run_trial(mode, model_dir, dataset, idx_envs, idx_trans, trial,
+                      motor_grid, state_grid, conf)
+
             # kill display server
             if conf["training"]["display"]:
                 display_proc.kill()
