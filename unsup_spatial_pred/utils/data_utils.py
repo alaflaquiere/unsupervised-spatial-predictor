@@ -28,9 +28,11 @@ def load_regular_grid(path):
     Loads compressed sensorimotor transitions from
     a npz file created by room-explorer
     """
-    path = os.path.join(path, "data_regular_grid.npz")
-    print("loading regular grid... [{}]".format(path))
-    with np.load(path) as npzfile:
+    fullpath = os.path.join(path, "regular_grid.npz")
+    assert os.path.exists(os.path.join(fullpath)), \
+        "no regular_grid.npz in the experiment directory"
+    print("loading regular grid... [{}]".format(fullpath))
+    with np.load(fullpath) as npzfile:
         data = dict(zip(npzfile.files,
                         [npzfile[x] for x in npzfile.files]))
     motor_grid = torch.Tensor(data["motor_grid"])

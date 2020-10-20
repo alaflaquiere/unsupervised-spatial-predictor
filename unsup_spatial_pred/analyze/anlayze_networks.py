@@ -15,7 +15,10 @@ class Evaluator:
     """Docstring"""
     def __init__(self, path):
         """Constructor"""
+        assert os.path.exists(path), "incorrect experiment path"
         self.path = path
+        # load the regular grid for evaluation of the models
+        self.motor_grid, self.state_grid = load_regular_grid(path)
         # collect all the hopping_base models
         search_str = os.path.join(self.path, "trial*", "hopping_base")
         self.dir_hop = sorted(glob.glob(search_str))
@@ -25,10 +28,15 @@ class Evaluator:
         # collect all the dynamic_base models
         search_str = os.path.join(self.path, "trial*", "dynamic_base")
         self.dir_dyn = sorted(glob.glob(search_str))
+        self.results_hop = None
+        self.results_sta = None
+        self.results_dyn = None
+
+    def evaluate(self):
         # compile the results
-        self.results_hop = self.evaluate_all(self.dir_hop)
-        self.results_sta = self.evaluate_all(self.dir_sta)
-        self.results_dyn = self.evaluate_all(self.dir_dyn)
+        self.results_hop = self.process_all_models(self.dir_hop)
+        self.results_sta = self.process_all_models(self.dir_sta)
+        self.results_dyn = self.process_all_models(self.dir_dyn)
 
     @staticmethod
     def compute_dissimilarities(state, h, topo_weight=10):
@@ -55,7 +63,7 @@ class Evaluator:
 
         return metric_error, topo_error
 
-    def evaluate(self, model, m_grid, sta_grid):
+    def process_model(self, model, m_grid, sta_grid):
         device = "cuda" if next(model.parameters()).is_cuda else "cpu"
         # get the embedding
         with torch.no_grad():
@@ -77,7 +85,7 @@ class Evaluator:
         _, sv_w, _ = np.linalg.svd(W.detach().cpu().numpy())
         return metric_error, topo_error, sv_h, sv_w
 
-    def evaluate_all(self, directories):
+    def process_all_models(self, directories):
         results = {"metric_errors": [],
                    "topo_errors": [],
                    "sv_hs": [],
@@ -93,10 +101,10 @@ class Evaluator:
                     os.path.join(d, "model.pth")
                 )
             )
-            # load the regular grid for evaluation
-            motor_grid, state_grid = load_regular_grid(d)  # todo load the regular grid at the root of the dataset
             # compute metrics
-            metric_error, topo_error, sv_h, sv_w = self.evaluate(net, motor_grid, state_grid)
+            metric_error, topo_error, sv_h, sv_w = self.process_model(net,
+                                                                      self.motor_grid,
+                                                                      self.state_grid)
             results["metric_errors"].append(metric_error)
             results["topo_errors"].append(topo_error)
             results["sv_hs"].append(sv_h)

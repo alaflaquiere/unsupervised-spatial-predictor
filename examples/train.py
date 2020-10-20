@@ -16,6 +16,8 @@ from unsup_spatial_pred import SiameseSMPredictor
 from unsup_spatial_pred import normalize_array, get_dataloader
 from unsup_spatial_pred import save_embedding, start_display_server
 
+# TODO: MOVE ALL THIS TO A TRAINER MODULE IN THE LIBRARY
+
 
 def get_git_hash():
     try:
