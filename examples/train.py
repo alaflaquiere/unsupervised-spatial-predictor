@@ -45,7 +45,6 @@ def check_directory(directory):
 
 
 def train_epoch(loader, model, loss_fn, optimizer, scheduler):
-    """TODO"""
     device = "cuda" if next(model.parameters()).is_cuda else "cpu"
     model.train()
     epoch_loss = 0.
@@ -74,16 +73,6 @@ def send_embedding(model, motor_grid, state_grid, model_dir):
                        state_grid,
                        W,
                        os.path.join(model_dir, "temp_emb.npy"))
-
-
-def save_model(model, directory, conf):
-    """TODO"""
-    # todo: move to the network?
-    # todo: add a load method to the network?
-    torch.save(model.state_dict(),
-               os.path.join(directory, "model.pth"))
-    with open(os.path.join(directory, "config.yml"), "w") as file:
-        yaml.dump(conf, file)
 
 
 def load_and_save_regular_grid(dataset, experiment):
@@ -137,11 +126,10 @@ def run_trial(mode, model_dir, dataset, idx_envs, idx_trans, trial, motor_grid, 
         if conf["training"]["display"]:
             send_embedding(net, motor_grid, state_grid, model_dir)
     # save model
-    save_model(net, model_dir, conf)
+    net.save(model_dir, conf)
 
 
 def run(conf):
-    """TODO"""
     dataset = conf["files"]["data_directory"]
     experiment = conf["files"]["save_directory"]
 
@@ -167,7 +155,7 @@ def run(conf):
             model_dir = os.path.join(experiment,
                                      "trial{:03}".format(trial),
                                      mode)
-            os.makedirs(model_dir)
+            # os.makedirs(model_dir)
 
             # start display server
             if conf["training"]["display"]:

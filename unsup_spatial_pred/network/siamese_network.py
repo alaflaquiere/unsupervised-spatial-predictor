@@ -1,9 +1,10 @@
+import os
+import yaml
 import torch
 import torch.nn as nn
 
 
 class SiameseSMPredictor(nn.Module):
-    """TODO"""
     def __init__(self, dim_m, dim_h, dim_s, activation):
         super().__init__()
         assert activation in ["selu", "relu"]
@@ -51,3 +52,26 @@ class SiameseSMPredictor(nn.Module):
 
     def get_first_weight_vector(self):
         return self.s_predictor[0].weight[:, self.dim_h:2 * self.dim_h]
+
+    def save(self, path, conf):
+        if not os.path.exists:
+            os.makedirs(path)
+        while os.path.exists(os.path.join(path, "model.pth")):
+            print("'{}' already exists; enter a new directory to save the network".format(
+                os.path.join(path, "model.pth")))
+            path = input()
+        pth_path = os.path.join(path, "model.pth")
+        yml_path = os.path.join(path, "config.yml")
+        torch.save(self.state_dict(), pth_path)
+        with open(yml_path, "w") as file:
+            yaml.dump(conf, file)
+
+    def load(self, path):
+        while not os.path.join(path, "model.pth"):
+            print("'{}' does not exist; enter a new directory to load from".format(path))
+            path = input()
+        self.load_state_dict(
+            torch.load(
+                os.path.join(path, "model.pth")
+            )
+        )

@@ -96,11 +96,7 @@ class Evaluator:
                 config = yaml.load(f, yaml.FullLoader)
             device = "cuda" if (config["training"]["gpu"] and torch.cuda.is_available()) else "cpu"
             net = SiameseSMPredictor(**config["network"]).to(device)
-            net.load_state_dict(
-                torch.load(
-                    os.path.join(d, "model.pth")
-                )
-            )
+            net.load(d)
             # compute metrics
             metric_error, topo_error, sv_h, sv_w = self.process_model(net,
                                                                       self.motor_grid,
@@ -152,5 +148,5 @@ class Evaluator:
         ax.set_xticklabels(["dynamic_base", "static_base", "hopping_base"])
         ax.set_title("W singular values")
 
-        plt.show(block=True)
+        plt.show(block=False)
         return fig

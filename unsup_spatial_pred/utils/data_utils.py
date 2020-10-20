@@ -24,9 +24,9 @@ def load_normalized_dataset(file, i_env, i_tran, mode):
 
 
 def load_regular_grid(path):
-    """TODO: to change
+    """
     Loads compressed sensorimotor transitions from
-    a npz file created by room-explorer
+    a npz file
     """
     fullpath = os.path.join(path, "regular_grid.npz")
     assert os.path.exists(os.path.join(fullpath)), \
@@ -42,7 +42,7 @@ def load_regular_grid(path):
 def get_dataloader(dataset, mode, idx_envs, idx_trans,  noise_motor, noise_sensor,
                    batch_size, num_workers, drop_last, shuffle):
 
-    with h5py.File(dataset) as file:
+    with h5py.File(dataset, "r") as file:
         transitions = dict()
         # combine the datasets
         for i_env, i_tran in zip(idx_envs, idx_trans):
@@ -71,7 +71,6 @@ def get_dataloader(dataset, mode, idx_envs, idx_trans,  noise_motor, noise_senso
 
 
 class TransitionsDataset(Dataset):
-    """TODO"""
 
     def __init__(self, data):
         self.data = data
