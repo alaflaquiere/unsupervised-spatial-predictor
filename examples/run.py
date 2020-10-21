@@ -20,7 +20,7 @@ def get_git_hash():
     try:
         binary_hash = subprocess.check_output(["git", "rev-parse", "HEAD"]).strip()
         hash_ = binary_hash.decode("utf-8")
-    except Exception:
+    except subprocess.CalledProcessError:
         hash_ = "no git commit"
     return hash_
 
