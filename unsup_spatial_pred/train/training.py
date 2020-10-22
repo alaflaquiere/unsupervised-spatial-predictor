@@ -34,7 +34,8 @@ def send_embedding(model, motor_grid, state_grid, model_dir):
     with torch.no_grad():
         model.eval()
         h_grid = model.get_representation(motor_grid.to(device))
-        h_grid = normalize_array(h_grid.cpu().numpy())
+        h_grid = h_grid.cpu().numpy()
+        # h_grid = normalize_array(h_grid)
         W = model.get_first_weight_vector().detach().cpu().numpy()
         save_embedding(h_grid,
                        state_grid,
@@ -47,7 +48,7 @@ def load_and_save_regular_grid(dataset, experiment):
     with h5py.File(dataset, "r") as file:
         motor_grid = file["agent"]["motor_grid"][:]
         state_grid = file["agent"]["state_grid"][:]
-        state_grid = normalize_array(state_grid)
+        # state_grid = normalize_array(state_grid)
     # save the regular grids at the root file of the experiment
     np.savez_compressed(os.path.join(experiment, "regular_grid.npz"),
                         motor_grid=motor_grid,
@@ -106,12 +107,13 @@ def run_experiment(conf):
     with h5py.File(dataset, "r") as file:
         n_transitions = file.attrs["dataset.n_transitions"]
         n_envs = file.attrs["dataset.n_runs"]
+    assert n_envs >= conf["training"]["n_env_per_training"],\
+        "not enough environments in the dataset"
 
     # save the regular grids at the root file of the experiment
     motor_grid, state_grid = load_and_save_regular_grid(dataset, experiment)
 
     for trial in range(conf["training"]["n_trials"]):
-        print("trial: {}".format(trial))
         idx_envs, idx_trans = draw_expl_indexes(n_envs, n_transitions,
                                                 conf["training"]["n_env_per_training"])
         for mode in ["hopping_base", "static_base", "dynamic_base"]:

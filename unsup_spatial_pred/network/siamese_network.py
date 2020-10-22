@@ -54,7 +54,7 @@ class SiameseSMPredictor(nn.Module):
         return self.s_predictor[0].weight[:, self.dim_h:2 * self.dim_h]
 
     def save(self, path, conf):
-        if not os.path.exists:
+        if not os.path.exists(path):
             os.makedirs(path)
         while os.path.exists(os.path.join(path, "model.pth")):
             print("'{}' already exists; enter a new directory to save the network".format(

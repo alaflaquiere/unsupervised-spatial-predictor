@@ -6,6 +6,7 @@ from torch.utils.data import Dataset, DataLoader
 
 
 def normalize_array(x):
+    # todo: check usage
     """normalize in [-1, 1] along axis=0"""
     mi, ma = np.min(x, axis=0, keepdims=True), np.max(x, axis=0, keepdims=True)
     return 2 * np.divide(x - mi, ma - mi, out=np.zeros_like(x), where=ma - mi != 0) - 1
@@ -35,8 +36,7 @@ def load_regular_grid(path):
     with np.load(fullpath) as npzfile:
         data = dict(zip(npzfile.files,
                         [npzfile[x] for x in npzfile.files]))
-    motor_grid = torch.Tensor(data["motor_grid"])
-    return motor_grid, data["state_grid"]
+    return torch.Tensor(data["motor_grid"]), data["state_grid"]
 
 
 def get_dataloader(dataset, mode, idx_envs, idx_trans, noise_motor, noise_sensor,

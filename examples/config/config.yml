@@ -1,6 +1,6 @@
 files:
   data_directory: "../../room_explorer/.data/FixedOrientationAndAperture.hdf5"
-  save_directory: ".model/temp"
+  save_directory: ".model/FixedOrientationAndAperture_10envs"
 
 network:
   dim_h: 3
@@ -19,8 +19,8 @@ optimizer:
   weight_decay: 0.0
 
 training:
-  n_trials: 10
+  n_trials: 30
   n_env_per_training: 10
-  n_epochs: 3  #60
-  display: True
+  n_epochs: 50
+  display: False
   gpu: True
