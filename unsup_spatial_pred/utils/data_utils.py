@@ -6,7 +6,6 @@ from torch.utils.data import Dataset, DataLoader
 
 
 def normalize_array(x):
-    # todo: check usage
     """normalize in [-1, 1] along axis=0"""
     mi, ma = np.min(x, axis=0, keepdims=True), np.max(x, axis=0, keepdims=True)
     return 2 * np.divide(x - mi, ma - mi, out=np.zeros_like(x), where=ma - mi != 0) - 1

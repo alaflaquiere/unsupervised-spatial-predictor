@@ -5,9 +5,8 @@ from tqdm import trange
 import torch
 import torch.nn as nn
 from torch.optim import Adam, lr_scheduler
-
 from unsup_spatial_pred import SiameseSMPredictor
-from unsup_spatial_pred import normalize_array, get_dataloader
+from unsup_spatial_pred import get_dataloader
 from unsup_spatial_pred import save_embedding, start_display_server
 
 
