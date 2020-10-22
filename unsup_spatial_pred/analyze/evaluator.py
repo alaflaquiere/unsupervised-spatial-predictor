@@ -65,8 +65,8 @@ class Evaluator:
         distances_h = pdist(h)
         distances_x = pdist(x_projection)
         # compute dissimilarity
-        normalized_diffs = np.abs(distances_h - distances_x) / distances_h.max()
-        weighting = np.exp(-weight * distances_h / distances_h.max())
+        normalized_diffs = np.abs(distances_h - distances_x) / np.max(distances_h)
+        weighting = np.exp(-weight * distances_h / np.max(distances_h))
         error = np.mean(normalized_diffs * weighting)
         # TODO: instead of going with a linear regression that minimizes
         #  the distance between points and their projection, one could
@@ -110,9 +110,9 @@ class Evaluator:
         for trial in range(self.num_trials):
             for mode in self.modes:
                 self.dissimilarities[(trial, mode, "topological")] =\
-                    self._get_dissimilarity(self.x_grid, self.embeddings[(trial, mode)], weight=10)
+                    self._get_dissimilarity(self.embeddings[(trial, mode)], weight=10)
                 self.dissimilarities[(trial, mode, "metric")] = \
-                    self._get_dissimilarity(self.x_grid, self.embeddings[(trial, mode)], weight=0)
+                    self._get_dissimilarity(self.embeddings[(trial, mode)], weight=0)
 
     def plot_experiment_stats(self):
         if len(self.dissimilarities) == 0:
