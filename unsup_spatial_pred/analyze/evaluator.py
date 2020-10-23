@@ -145,7 +145,7 @@ class Evaluator:
             shifts = np.arange(-res.shape[1]//2, res.shape[1]//2) + 1
             positions = (res.shape[1] + 1) * mode_positions[mode] + shifts
             ax.violinplot(res, positions=positions)
-        ax.set_xticks(list(mode_positions.values()))
+        ax.set_xticks([(res.shape[1] + 1) * p for p in mode_positions.values()])
         ax.set_xticklabels(self.modes)
         ax.set_title("embedding singular values")
 
@@ -155,26 +155,11 @@ class Evaluator:
             shifts = np.arange(-res.shape[1] // 2, res.shape[1] // 2) + 1
             positions = (res.shape[1] + 1) * mode_positions[mode] + shifts
             ax.violinplot(res, positions=positions)
-        ax.set_xticks(list(mode_positions.values()))
+        ax.set_xticks([(res.shape[1] + 1) * p for p in mode_positions.values()])
         ax.set_xticklabels(self.modes)
         ax.set_title("first W singular values")
 
-        plt.show(block=False)
-        return fig
-
-    def plot_embedding(self, trial=0):
-        if len(self.embeddings) == 0:
-            self.compute_embeddings()
-        mode_subplot = {mode: i for i, mode in enumerate(self.modes)}
-        fig = plt.figure(figsize=(12, 4))
-        for mode in self.modes:
-            emb = self.embeddings[(trial, mode)]
-            x_proj = self._get_projection_in_embedding(emb)
-            ax = fig.add_subplot(1, 3, mode_subplot[mode] + 1, projection="3d")
-            ax.plot(emb[:, 0], emb[:, 1], emb[:, 2], 'r.')
-            ax.plot(x_proj[:, 0], x_proj[:, 1], x_proj[:, 2], 'k.')
-            ax.set_title("trial {}, mode {}".format(trial, mode))
-        plt.show(block=False)
+        plt.show(block=True)
         return fig
 
     def plot_pairwise_distances_comparison(self, trial=0, num=10000):
@@ -194,10 +179,10 @@ class Evaluator:
             ax.set_xlabel("ground-truth distances")
             ax.set_ylabel("embedded distances")
             ax.set_title("trial {}, mode {}".format(trial, mode))
-        plt.show(block=False)
+        plt.show(block=True)
         return fig
 
-    def plot_state_matching(self, trial=0, rays=False):
+    def plot_embedding(self, trial=0, rays=False):
         if len(self.embeddings) == 0:
             self.compute_embeddings()
         mode_subplot = {mode: i for i, mode in enumerate(self.modes)}
@@ -220,26 +205,5 @@ class Evaluator:
                     emb[:, 1],
                     emb[:, 2],
                     'r.', alpha=0.4)
-
-            ax.plot(x_projection[1295, 0],
-                    x_projection[1295, 1],
-                    x_projection[1295, 2],
-                    "bv")
-            ax.plot(x_projection[1778, 0],
-                    x_projection[1778, 1],
-                    x_projection[1778, 2],
-                    "bv")
-            ax.plot(emb[1295, 0],
-                    emb[1295, 1],
-                    emb[1295, 2],
-                    "mv")
-            ax.plot(emb[1778, 0],
-                    emb[1778, 1],
-                    emb[1778, 2],
-                    "mv")
-
-
-if __name__ == '__main__':
-    evaluator = Evaluator("../../examples/.model/deprecated_FixedOrientationAndAperture_10envs")
-    evaluator.compute_embeddings()
-    plt.show(block=True)
+            ax.set_title(mode)
+        plt.show(block=True)
