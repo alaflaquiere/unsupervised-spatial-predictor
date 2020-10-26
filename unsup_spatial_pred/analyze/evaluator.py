@@ -66,7 +66,7 @@ class Evaluator:
         distances_x = pdist(x_projection)
         # compute dissimilarity
         normalized_diffs = np.abs(distances_h - distances_x) / np.max(distances_h)
-        weighting = np.exp(-weight * distances_h / np.max(distances_h))
+        weighting = np.exp(-weight * distances_x / np.max(distances_x))
         error = np.mean(normalized_diffs * weighting)
         # TODO: instead of going with a linear regression that minimizes
         #  the distance between points and their projection, one could
