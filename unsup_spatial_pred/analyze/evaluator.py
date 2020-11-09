@@ -33,6 +33,7 @@ class Evaluator:
         self.embeddings = dict()
         self.singular_values = dict()
         self.dissimilarities = dict()
+        self.dissimilarity_profiles = dict()
 
     def _get_projection_in_embedding(self, h, x=None):
         x = self.x_grid if x is None else x
@@ -59,6 +60,9 @@ class Evaluator:
         return h_grid
 
     def _get_dissimilarity(self, h, weight=0):
+        # TODO: instead of going with a linear regression that minimizes
+        #  the distance between points and their projection, one could
+        #  train a linear model to minimize the dissimilarities directly!
         # project the states in the embedding space
         x_projection = self._get_projection_in_embedding(h)
         # compute pairwise distances
@@ -68,10 +72,22 @@ class Evaluator:
         normalized_diffs = np.abs(distances_h - distances_x) / np.max(distances_h)
         weighting = np.exp(-weight * distances_x / np.max(distances_x))
         error = np.mean(normalized_diffs * weighting)
-        # TODO: instead of going with a linear regression that minimizes
-        #  the distance between points and their projection, one could
-        #  train a linear model to minimize the dissimilarities directly!
         return error
+
+    def _get_dissimilarity_profile(self, h, weight_max=10):
+        # project the states in the embedding space
+        x_projection = self._get_projection_in_embedding(h)
+        # compute pairwise distances
+        distances_h = pdist(h)
+        distances_x = pdist(x_projection)
+        # compute dissimilarity
+        normalized_diffs = np.abs(distances_h - distances_x) / np.max(distances_h)
+        errors = []
+        weights = np.linspace(0, weight_max, 10)
+        for weight in weights:
+            weighting = np.exp(-weight * distances_x / np.max(distances_x))
+            errors.append(np.mean(normalized_diffs * weighting))
+        return weights, errors
 
     def _get_embedding_sv(self, trial, mode):
         if len(self.embeddings) == 0:
@@ -95,24 +111,34 @@ class Evaluator:
                 self.embeddings[(trial, mode)] = self._get_embedding(trial, mode)
 
     def compute_singular_values(self):
-        print("getting singular values...")
         if len(self.embeddings) == 0:
             self.compute_embeddings()
+        print("getting singular values...")
         for trial in range(self.num_trials):
             for mode in self.modes:
                 self.singular_values[(trial, mode, "embedding")] = self._get_embedding_sv(trial, mode)
                 self.singular_values[(trial, mode, "first_layer")] = self._get_first_linear_layer_sv(trial, mode)
 
     def compute_dissimilarities(self):
-        print("computing dissimilarities...")
         if len(self.embeddings) == 0:
             self.compute_embeddings()
+        print("computing dissimilarities...")
         for trial in range(self.num_trials):
             for mode in self.modes:
                 self.dissimilarities[(trial, mode, "topological")] =\
                     self._get_dissimilarity(self.embeddings[(trial, mode)], weight=10)
                 self.dissimilarities[(trial, mode, "metric")] = \
                     self._get_dissimilarity(self.embeddings[(trial, mode)], weight=0)
+
+    def compute_dissimilarities_profiles(self):
+        if len(self.embeddings) == 0:
+            self.compute_embeddings()
+        print("computing dissimilarities profiles...")
+        for trial in range(self.num_trials):
+            for mode in self.modes:
+                weights, self.dissimilarity_profiles[(trial, mode, "topological")] =\
+                    self._get_dissimilarity_profile(self.embeddings[(trial, mode)], weight_max=10)
+        self.dissimilarity_profiles["weights"] = weights
 
     def plot_experiment_stats(self):
         if len(self.dissimilarities) == 0:
@@ -161,6 +187,39 @@ class Evaluator:
 
         plt.show(block=True)
         return fig
+
+    def plot_dissimilarity_profile(self, trial=0):
+        if len(self.embeddings) == 0:
+            self.compute_embeddings()
+        plt.figure(figsize=(7, 7))
+        ax = plt.gca()
+        for mode in self.modes:
+            weights, values = self._get_dissimilarity_profile(self.embeddings[(trial, mode)])
+            ax.plot(weights, values, label=mode)
+            ax.set_xlim(weights[-1], weights[0])
+            ax.set_xlabel("weighting")
+            ax.set_ylabel("dissimilarity")
+            ax.set_title("trial {}".format(trial, mode))
+            plt.legend()
+        plt.show(block=True)
+
+    def plot_dissimilarity_profiles(self):
+        if len(self.dissimilarity_profiles) == 0:
+            self.compute_dissimilarities_profiles()
+        plt.figure(figsize=(7, 7))
+        ax = plt.subplot(1, 1, 1)
+        weights = self.dissimilarity_profiles["weights"]
+        for mode in self.modes:
+            res = [self.dissimilarity_profiles[(trial, mode, "topological")] for trial in range(self.num_trials)]
+            mean_res = np.mean(np.array(res), axis=0)
+            std_red = np.std(np.array(res), axis=0)
+            ax.plot(weights, mean_res, label=mode)
+            ax.fill_between(weights, mean_res - std_red, mean_res + std_red, alpha=0.4)
+        ax.set_xlim(weights[-1], weights[0])
+        ax.set_title("dissimilarity profiles")
+        ax.set_xlabel("weighting")
+        ax.legend(loc="upper left")
+        plt.show(block=True)
 
     def plot_pairwise_distances_comparison(self, trial=0, num=10000):
         if len(self.embeddings) == 0:

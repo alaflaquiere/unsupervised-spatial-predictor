@@ -7,6 +7,7 @@ def run(path):
     evaluator.plot_experiment_stats()
     evaluator.plot_embedding(0)
     evaluator.plot_pairwise_distances_comparison(0)
+    evaluator.plot_dissimilarity_profiles()
 
 
 if __name__ == '__main__':
